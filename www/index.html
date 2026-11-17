@@ -1,0 +1,315 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSC Study Progress Tracker</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased transition-colors duration-200 min-h-screen flex flex-col">
+
+  <!-- Toast Notification Container (Replaces alert/confirm) -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- Confirmation Modal (Custom replacement for window.confirm) -->
+  <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+      <h3 id="confirm-title" class="text-lg font-bold text-slate-900 dark:text-white mb-2">Confirm Action</h3>
+      <p id="confirm-message" class="text-sm text-slate-600 dark:text-slate-400 mb-6">Are you sure you want to proceed?</p>
+      <div class="flex justify-end gap-3">
+        <button id="confirm-cancel-btn" class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">
+          Cancel
+        </button>
+        <button id="confirm-ok-btn" class="px-4 py-2 rounded-xl text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white transition shadow-sm">
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <!-- App Title & Badge -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+          SSC
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+            SSC Study Progress Tracker
+          </h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Maths • English • Vocabulary • GK • Reasoning
+          </p>
+        </div>
+      </div>
+
+      <!-- Controls: Date Selector, Streak, Theme Toggle -->
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <!-- Streak Counter -->
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 text-xs sm:text-sm font-semibold" title="Consecutive days logged">
+          <span>🔥</span>
+          <span id="streak-count">0</span>
+          <span class="hidden sm:inline">Day Streak</span>
+        </div>
+
+        <!-- Quick Date Selector -->
+        <div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+          <button id="prev-date-btn" class="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition" title="Previous Day">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <input type="date" id="active-date" class="bg-transparent text-xs sm:text-sm font-medium px-2 py-1 text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer" />
+          <button id="next-date-btn" class="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition" title="Next Day">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <!-- Dark/Light Theme Toggle -->
+        <button id="theme-toggle" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition" title="Toggle Dark/Light Theme">
+          <!-- Sun icon (shown in dark mode) -->
+          <svg id="icon-sun" class="w-5 h-5 hidden dark:block text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <!-- Moon icon (shown in light mode) -->
+          <svg id="icon-moon" class="w-5 h-5 block dark:hidden text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <!-- 1. Dashboard / Summary Cards -->
+    <section aria-label="Progress Summary">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Card 1: Maths Lectures Milestone -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">Maths Syllabus</span>
+              <span id="maths-pct-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300">0%</span>
+            </div>
+            <div class="flex items-baseline gap-1.5">
+              <span id="summary-maths-lec" class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">0</span>
+              <span class="text-sm font-medium text-slate-500 dark:text-slate-400">/ 400 Lectures</span>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div id="maths-progress-bar" class="h-full bg-blue-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="maths-remaining-text" class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">400 lectures remaining</p>
+          </div>
+        </div>
+
+        <!-- Card 2: Dictionary Pages Milestone -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Dictionary Goal</span>
+              <span id="vocab-pct-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">0%</span>
+            </div>
+            <div class="flex items-baseline gap-1.5">
+              <span id="summary-vocab-page" class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">0</span>
+              <span class="text-sm font-medium text-slate-500 dark:text-slate-400">/ 800 Pages</span>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div id="vocab-progress-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="vocab-remaining-text" class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">800 pages remaining</p>
+          </div>
+        </div>
+
+        <!-- Card 3: Questions Solved Today -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">Selected Date Qs</span>
+              <span id="today-tasks-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">0 / 5 Done</span>
+            </div>
+            <div class="flex items-baseline gap-1.5">
+              <span id="summary-today-qs" class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">0</span>
+              <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Questions</span>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div id="today-tasks-bar" class="h-full bg-purple-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="today-qs-breakdown" class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 truncate">M:0 • E:0 • V:0 • GK:0 • R:0</p>
+          </div>
+        </div>
+
+        <!-- Card 4: Cumulative Questions Solved -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">All-Time Practice</span>
+              <span id="total-sessions-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300">0 Logs</span>
+            </div>
+            <div class="flex items-baseline gap-1.5">
+              <span id="summary-total-qs" class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">0</span>
+              <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Qs</span>
+            </div>
+          </div>
+          <div class="mt-4">
+            <p id="alltime-qs-breakdown" class="text-xs text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-slate-800/70 px-2.5 py-1.5 rounded-lg truncate">
+              M:0 • E:0 • V:0 • GK:0 • R:0
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 2. Daily Checklist & Study Logger -->
+    <section aria-label="Daily Study Checklist" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span>Daily Study Checklist & Question Logger</span>
+            <span id="autosave-indicator" class="text-xs font-normal text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+              Auto-saved
+            </span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            Check off completed sessions, update your latest lecture/page numbers, and record questions solved.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="reset-day-btn" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition">
+            Clear Day
+          </button>
+          <button id="save-session-btn" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span>Save / Log Today's Session</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 5 Subject Cards Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        <!-- Subject 1: Maths -->
+        <div id="card-maths" class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm transition-all">
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <label class="flex items-start gap-3 cursor-pointer select-none flex-1">
+              <input type="checkbox" id="chk-maths" class="mt-1 w-5 h-5 rounded-md text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800 cursor-pointer" />
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-xs font-bold rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">MATHS</span>
+                  <span class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Complete Maths lecture (1.5x pause-and-solve)</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Target: 400 lectures total</p>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+            <div>
+              <label for="input-maths-lec" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Current Lecture # (out of 400)
+              </label>
+              <div class="relative">
+                <input type="number" id="input-maths-lec" min="0" max="400" placeholder="e.g. 145"
+                  class="w-full px-3 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" />
+                <span class="absolute right-3 top-2 text-xs text-slate-400">/ 400</span>
+              </div>
+            </div>
+            <div>
+              <label for="input-maths-qs" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Number of Questions Solved
+              </label>
+              <input type="number" id="input-maths-qs" min="0" placeholder="e.g. 45"
+                class="w-full px-3 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Subject 2: English -->
+        <div id="card-english" class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm transition-all">
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <label class="flex items-start gap-3 cursor-pointer select-none flex-1">
+              <input type="checkbox" id="chk-english" class="mt-1 w-5 h-5 rounded-md text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800 cursor-pointer" />
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-xs font-bold rounded-md bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">ENGLISH</span>
+                  <span class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Complete 1-hour English Grammar session</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Grammar rules, error spotting & comprehension</p>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+            <div>
+              <label for="input-english-topic" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Grammar Topic Covered
+              </label>
+              <input type="text" id="input-english-topic" placeholder="e.g. Subject-Verb Agreement"
+                class="w-full px-3 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white" />
+            </div>
+            <div>
+              <label for="input-english-qs" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Number of Questions Solved
+              </label>
+              <input type="number" id="input-english-qs" min="0" placeholder="e.g. 30"
+                class="w-full px-3 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Subject 3: Vocabulary -->
+        <div id="card-vocab" class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm transition-all">
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <label class="flex items-start gap-3 cursor-pointer select-none flex-1">
+              <input type="checkbox" id="chk-vocab" class="mt-1 w-5 h-5 rounded-md text-emerald-600 focus:ring-emerald-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800 cursor-pointer" />
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-xs font-bold rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">VOCABULARY</span>
+                  <span class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Complete 2 pages of English Dictionary practice</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Hindi-English translation & active recall (Target: 800 pages)</p>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+            <div>
+              <label for="input-vocab-page" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Current Dictionary Page (out of 800)
+              </label>
+              <div class="relative">
+                <input type="number" id="input-vocab-page" min="0" max="800" placeholder="e.g. 210"
+                  class="w-full px-3 py-2 rounded-xl text-sm
